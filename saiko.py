@@ -21,3 +21,4 @@ class Analyzer:
         """
 
         divs = self.html.find_all('div', class_=self.div_pat)
+
