@@ -115,5 +115,11 @@ def main(start, end, min_res, require_img):
 
 
 if __name__ == '__main__':
+    startpage = int(input('start page:\n'))
+    endpage = int(input('end page:\n'))
+    lowbound =  int(input('the leastest response\n'))
+    isrequire = input('require image in the first board? [y/n]\n')
+    isrequire = True if isrequire == 'y' else False
 
-    main(600, 900, 120, False)
+
+    main(startpage, endpage, lowbound, isrequire)
