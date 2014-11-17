@@ -9,7 +9,7 @@ import threading
 from queue import Queue
 from lib.prompt import Prompt
 import logging
-logging.basicConfig(level=logging.WARNING, format= ' %(message)s')
+logging.basicConfig(level=logging.DEBUG, format= ' %(message)s')
 
 ######################
 TIMEOUT = 5
@@ -31,7 +31,7 @@ def requests_get(url, **kwargs):
 class Analyzer:
     host_url = 'http://h.acfun.tv/t/'
     response_pat = re.compile(r'.*?(\d+)')
-    div_pat = re.compile(r'threads_')
+    div_sinal ='h-threads-item uk-clearfix'
 
     def __init__(self, content: bytes, min_response, require_img=False):
         self.html = BeautifulSoup(content)
@@ -39,24 +39,40 @@ class Analyzer:
         self.require_img = require_img
         self.parseds = self._parse()
 
+
+    @staticmethod
+    def _find_response_for_bs(tag):
+        """
+        验证是否有大于多少条回复的那句话, 应为sega和这个是同一个css class, 所以特别使用一个func来验证
+
+        """
+        if tag.has_attr('class') and tag['class' ]== ['h-threads-tips']:
+            return True
+        else:
+            return False
+
+
     def _parse(self):
         """
         :return: a iterable of threadsid and blockquote
         """
 
-        divs = self.html.find_all('div', class_=self.div_pat)
+        divs = self.html.find_all('div', class_=self.div_sinal)
 
         for div in divs:
-
-            if self.require_img and not div.a.img:
+            logging.debug('divs')
+            if self.require_img and not div.find('div', class_='h-threads-img-box'):
                 continue
 
-            response_font = div.find('font', color='#707070')
+            response_font = div.find(self._find_response_for_bs)
             if response_font:
-                response_times =  int(self.response_pat.match(response_font.text).group(1))
+
+                response_times = int(self.response_pat.match(response_font.text).group(1))
+
+
                 if response_times >= self.min_response:
-                    blockquote = div.blockquote.text
-                    yield div['class'][0].split('_')[1], blockquote
+                    blockquote = div.find('div',class_='h-threads-content').text
+                    yield div['data-threads-id'], blockquote
 
     @property
     def links(self):
