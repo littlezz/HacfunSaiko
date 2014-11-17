@@ -9,7 +9,7 @@ import threading
 from queue import Queue
 from lib.prompt import Prompt
 import logging
-logging.basicConfig(level=logging.DEBUG, format= ' %(message)s')
+logging.basicConfig(level=logging.WARNING, format= ' %(message)s')
 
 ######################
 TIMEOUT = 5
@@ -60,7 +60,7 @@ class Analyzer:
         divs = self.html.find_all('div', class_=self.div_sinal)
 
         for div in divs:
-            logging.debug('divs')
+
             if self.require_img and not div.find('div', class_='h-threads-img-box'):
                 continue
 
