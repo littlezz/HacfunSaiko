@@ -77,22 +77,6 @@ def retry_connect(retry_times, timeout, error=None):
     return decorator
 
 
-def sema_lock(s):
-    def decorator(func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            with s:
-                return func(*args, **kwargs)
-        return wrapper
-    return decorator
-
-
-def add_nowstrftime(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        ret = func(*args, **kwargs)
-        return list(ret) + [datetime.now().strftime('%y-%m-%d %H:%M')]
-    return wrapper
 
 
 def put_data(func):
