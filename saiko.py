@@ -107,7 +107,7 @@ def main(start, end, min_res, require_img):
     in_q = Queue(maxsize=10)
     result = []
     _threadings = list()
-    prompt.reset(end-start+1,'start')
+    prompt.reset(end-start+1, 'start')
     for page in range(start, end+1):
         url = main_host + str(page)
         t = threading.Thread(target=put_content, args=(in_q, url))
