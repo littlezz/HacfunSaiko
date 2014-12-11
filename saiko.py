@@ -112,12 +112,18 @@ class Analyzer:
             response_div = bs.find(self._bs_find_response)
 
             if response_div:
+
                 response_tot = int(self.response_pat.match(response_div.text).group(1))
                 if response_tot >= self.min_response:
 
-                    blockquote = div.find('div',class_='h-threads-content').text
+                    blockquote = div.find('div', class_='h-threads-content').text
                     link = self.host_url + div['data-threads-id']
 
                     self._results.append((link, blockquote))
 
+def main():
+    pass
 
+
+if __name__ == '__main__':
+    pass
