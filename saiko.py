@@ -121,9 +121,50 @@ class Analyzer:
 
                     self._results.append((link, blockquote))
 
+
+class PageDescriptor:
+    def __init__(self, name):
+        self.name = name
+
+    def __set__(self, instance, value):
+        value = int(value)
+        instance.__dict__[self.name] = value
+
+
+class UserInput:
+    start = PageDescriptor('start')
+    end = PageDescriptor('end')
+
+    def __init__(self):
+        self.required_img = False
+
+    @loop
+    def collect(self):
+        try:
+            self.start = input('input the start page(default 1)\n') or '1'
+            self.end = input('end page\n')
+            self.required_img = True if input('require img? [y/n]\n') == 'y' else False
+
+        except ValueError:
+            self.raise_errorinfo()
+            return False
+
+        if self.start >= self.end:
+            self.raise_errorinfo()
+            return False
+
+        return True
+
+    @staticmethod
+    def raise_errorinfo():
+        print('Unvalid value, please input again.\n')
+
+
 def main():
-    pass
+    user_input = UserInput()
+    user_input.collect()
+    print(user_input.start, user_input.end, user_input.required_img)
 
 
 if __name__ == '__main__':
-    pass
+    main()
