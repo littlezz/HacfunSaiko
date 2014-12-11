@@ -11,7 +11,9 @@ __author__ = 'zz'
 TIMEOUT = 3
 RETRY_TIMES = 3
 MAX_THREADING = 4
+HOST = 'http://h.acfun.tv/%E7%BB%BC%E5%90%88%E7%89%881?page='
 #######################
+
 
 
 class AsyncRequest(requests.Session):
@@ -20,7 +22,7 @@ class AsyncRequest(requests.Session):
         self._lock = threading.Lock()
         self._in_q = queue.Queue()
         self._out_q = queue.Queue()
-        self._sentinel = object()
+        self.sentinel = object()
         self._threading_exit_num = 0
 
         super().__init__()
@@ -36,8 +38,8 @@ class AsyncRequest(requests.Session):
     def _threading_process(self):
         url = self._in_q.get()
 
-        if url == self._sentinel:
-            self._in_q.put(self._sentinel)
+        if url == self.sentinel:
+            self._in_q.put(self.sentinel)
             self._threading_exit_signal()
             return True
 
@@ -45,15 +47,15 @@ class AsyncRequest(requests.Session):
         self._out_q.put(resp.content)
 
     def _threading_exit_signal(self):
-        """统计结束的线程, 全部退出后给出口队列提交self._sentinel"""
+        """统计结束的线程, 全部退出后给出口队列提交self.sentinel"""
         self._threading_exit_num += 1
 
         # all threading were exited
         if self._threading_exit_num == self.max_threading - 1:
-            self._out_q.put(self._sentinel)
+            self._out_q.put(self.sentinel)
 
     def stop(self):
-        self._in_q.put(self._sentinel)
+        self._in_q.put(self.sentinel)
 
     def start(self):
         for i in range(self.max_threading):
@@ -61,7 +63,7 @@ class AsyncRequest(requests.Session):
             t.start()
 
     def extract(self):
-        """when every threading had been exied return self._sentinel
+        """when every threading had been exied return self.sentinel
         else return resp.content"""
         return self._out_q.get()
 
@@ -71,7 +73,7 @@ class Analyzer:
     response_pat = re.compile(r'.*?(\d+)')
     main_div = 'h-threads-item uk-clearfix'
 
-    def __int__(self, min_response, required_img=False):
+    def __init__(self, min_response, required_img=False):
         self._results = []
         self.min_response = min_response
         self.required_img = required_img
@@ -122,7 +124,7 @@ class Analyzer:
                     self._results.append((link, blockquote))
 
 
-class PageDescriptor:
+class IntDescriptor:
     def __init__(self, name):
         self.name = name
 
@@ -132,8 +134,9 @@ class PageDescriptor:
 
 
 class UserInput:
-    start = PageDescriptor('start')
-    end = PageDescriptor('end')
+    start = IntDescriptor('start')
+    end = IntDescriptor('end')
+    min_response = IntDescriptor('min_response')
 
     def __init__(self):
         self.required_img = False
@@ -143,6 +146,7 @@ class UserInput:
         try:
             self.start = input('input the start page(default 1)\n') or '1'
             self.end = input('end page\n')
+            self.min_response = input('min response? \n')
             self.required_img = True if input('require img? [y/n]\n') == 'y' else False
 
         except ValueError:
@@ -159,11 +163,37 @@ class UserInput:
     def raise_errorinfo():
         print('Unvalid value, please input again.\n')
 
+@loop
+def analyze_content(analyzer: Analyzer, async_request: AsyncRequest):
+    content = async_request.extract()
+
+    if content == async_request.sentinel:
+        return True
+
+    analyzer.analyze(content)
+
 
 def main():
     user_input = UserInput()
     user_input.collect()
-    print(user_input.start, user_input.end, user_input.required_img)
+
+    async_request = AsyncRequest(max_threading=4)
+    async_request.start()
+
+    for pn in range(user_input.start, user_input.end + 1):
+        request_url = HOST + str(pn)
+        async_request.submit(request_url)
+
+    # there is no more info to put to async_requests.
+    async_request.stop()
+
+    analyzer = Analyzer(min_response=user_input.min_response)
+
+    analyze_content(analyzer, async_request)
+    for link, blockquote in analyzer.results:
+        print(link)
+        print(blockquote)
+        print('-' * 70)
 
 
 if __name__ == '__main__':
