@@ -4,6 +4,9 @@ import threading
 from lib.decorators import loop, retry_connect
 import requests
 from bs4 import BeautifulSoup
+from lib.prompt import Prompt
+import logging
+logging.basicConfig(level=logging.WARNING, format=' %(message)s')
 __author__ = 'zz'
 
 
@@ -13,7 +16,6 @@ RETRY_TIMES = 3
 MAX_THREADING = 4
 HOST = 'http://h.acfun.tv/%E7%BB%BC%E5%90%88%E7%89%881?page='
 #######################
-
 
 
 class AsyncRequest(requests.Session):
@@ -46,6 +48,9 @@ class AsyncRequest(requests.Session):
         resp = self.get(url)
         self._out_q.put(resp.content)
 
+        #call prompt
+        self.prompt()
+
     def _threading_exit_signal(self):
         """统计结束的线程, 全部退出后给出口队列提交self.sentinel"""
         self._threading_exit_num += 1
@@ -66,6 +71,14 @@ class AsyncRequest(requests.Session):
         """when every threading had been exied return self.sentinel
         else return resp.content"""
         return self._out_q.get()
+
+    @Prompt
+    def prompt(self):
+        """
+        do nothing
+        when process execute, call this method for Prompt to count.
+        """
+        pass
 
 
 class Analyzer:
@@ -111,7 +124,7 @@ class Analyzer:
 
                 continue
 
-            response_div = bs.find(self._bs_find_response)
+            response_div = div.find(self._bs_find_response)
 
             if response_div:
 
@@ -163,6 +176,7 @@ class UserInput:
     def raise_errorinfo():
         print('Unvalid value, please input again.\n')
 
+
 @loop
 def analyze_content(analyzer: Analyzer, async_request: AsyncRequest):
     content = async_request.extract()
@@ -179,6 +193,11 @@ def main():
 
     async_request = AsyncRequest(max_threading=4)
     async_request.start()
+
+    logging.debug('start: %s, end: %s, min: %s, img?: %s',
+                  user_input.start, user_input.end, user_input.min_response, user_input.required_img)
+
+    async_request.prompt.set_task(user_input.end - user_input.start + 1, '开始下载')
 
     for pn in range(user_input.start, user_input.end + 1):
         request_url = HOST + str(pn)
